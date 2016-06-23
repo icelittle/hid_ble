@@ -1,0 +1,48 @@
+# Object files
+*.o
+*.ko
+*.obj
+*.elf
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Libraries
+*.a
+*.la
+*.lo
+
+# Shared objects (inc. Windows DLLs)
+*.dll
+*.so
+*.so.*
+*.dylib
+
+# Executables
+*.out
+*.app
+*.i*86
+*.x86_64
+
+
+# Debug files
+*.dSYM/
+
+#user inf
+*.uvguix.*
+
+# JLink setting
+JLinkSettings.ini
+JLinkLog.txt
+
+# Product folder and build folder
+Interface/Project/build/
+Platform/Project/build_device
+RTE/
+Listings/
+Objects/
+uvoptx/
+Output/
+DebugConfig/
+
