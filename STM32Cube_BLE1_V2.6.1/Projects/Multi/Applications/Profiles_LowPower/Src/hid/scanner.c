@@ -1,14 +1,33 @@
 
+#include "cube_hal.h"
+#include <stdio.h>
+#include <stdbool.h>
+#include <stdlib.h>
 
 #define divceil(x, n) (((x) + (n) - 1) / (n))
 #define min(x, y) ((x) < (y) ? (x) : (y))
+#define _BV(bit) (1 << (bit))
 
 #define OUTPUT	true
 #define INPUT	false
+	
+#define UP		0
+#define DOWN	1
 
-static uint8_t *states;
+static uint8_t *states = NULL;
 static int nrows = 6, ncols = 14;
-static matrix_callback_t callback;
+
+static uint8_t scode[84] = {
+	4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 
+	14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 
+	24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 
+	34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 
+	44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 
+	54, 55};
+static uint8_t* last_scancode = NULL;
+
+static uint8_t key_map[32] = {0};
+static uint8_t six_keys[8] = {0};
 
 uint8_t matrix[6][14] = {
 	{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13},
@@ -20,14 +39,14 @@ uint8_t matrix[6][14] = {
 };
 
 uint8_t rows[] = {0, 1, 2, 3, 4, 5};
-uint8_t cols[] = {6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 20};
+uint8_t cols[] = {6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19};
 
-struct hid_pin_t {
+typedef struct {
 	GPIO_TypeDef* port;
 	uint16_t	  pin;
-};
+}hid_pin_t;
 
-struct hid_pin_t hid_pins[20] = {
+hid_pin_t hid_pins[20] = {
 	{GPIOA, GPIO_PIN_3},//r1
 	{GPIOA, GPIO_PIN_2},//r2
 	{GPIOC, GPIO_PIN_6},//r3
@@ -45,12 +64,11 @@ struct hid_pin_t hid_pins[20] = {
 	{GPIOC, GPIO_PIN_7},//c8
 	{GPIOB, GPIO_PIN_12},//c9
 	{GPIOB, GPIO_PIN_13},//c10
-	{GPIOC, GPIO_PIN_14},//c11
+	{GPIOB, GPIO_PIN_14},//c11
 	{GPIOB, GPIO_PIN_15},//c12
 	{GPIOA, GPIO_PIN_10},//c13
 	{GPIOA, GPIO_PIN_9},//c14
-}
-
+};
 
 static bool is_pressed(uint8_t row, uint8_t col)
 {
@@ -59,7 +77,6 @@ static bool is_pressed(uint8_t row, uint8_t col)
 	const uint8_t bit = pos & 0x07;
 	return (states[byte] >> bit) & 0x01;
 }
-
 
 static void set_state(uint8_t row, uint8_t col, bool state)
 {
@@ -72,69 +89,32 @@ static void set_state(uint8_t row, uint8_t col, bool state)
 		states[byte] &= ~(1 << bit);
 }
 
-void MATRIX_init(matrix_callback_t callback_)
-{
-	states = malloc(divceil(rows*cols, 8));
-	memset(states, 0, divceil(rows*cols, 8));
-	callback = callback_;
-}
-
-static void IO_config(hid_pin_t hid_pin, dir)
+static void IO_config(uint8_t pin_num, bool dir)
 {
   GPIO_InitTypeDef  GPIO_InitStruct;
-  GPIO_InitStruct.Pin = hid_pin.pin;
+  GPIO_InitStruct.Pin = hid_pins[pin_num].pin;
   GPIO_InitStruct.Mode = (dir == INPUT ? GPIO_MODE_INPUT : GPIO_MODE_OUTPUT_PP);
-  GPIO_InitStruct.Pull = (dir == INPUT ? GPIO_NOPULL : GPIO_PULLUP);
+  GPIO_InitStruct.Pull = (dir == INPUT ? GPIO_PULLDOWN : GPIO_NOPULL);
   GPIO_InitStruct.Speed = GPIO_SPEED_FAST;
   
-  HAL_GPIO_Init(hid_pin.port, &GPIO_InitStruct);
+  HAL_GPIO_Init(hid_pins[pin_num].port, &GPIO_InitStruct);
   
   if(dir != INPUT) {
-  	HAL_GPIO_WritePin(hid_pin.port, hid_pins.port, GPIO_PIN_SET); 
+  	HAL_GPIO_WritePin(hid_pins[pin_num].port, hid_pins[pin_num].pin, GPIO_PIN_RESET); 
   }
 }
 
-bool MATRIX_scan()
+static void IO_set(uint8_t pin_num, GPIO_PinState pin_state)
 {
-	/* set all rows to Hi-Z */
-	for (uint8_t i = 0; i < nrows; ++i) {
-		IO_config(rows[i], INPUT);
-		IO_set(rows[i], false);
-	}
-	/* set all columns to input with pull-ups */
-	for (uint8_t i = 0; i < ncols; ++i) {
-		IO_config(cols[i], INPUT);
-		IO_set(cols[i], true);
-	}
-	bool changed = false;
-	/* scan the matrix */
-	for (uint8_t i = 0; i < nrows; ++i) {
-		IO_config(rows[i], OUTPUT);
-		_delay_us(1);
-		for (uint8_t j = 0; j < ncols; ++j) {
-			bool state = !IO_get(cols[j]);
-			if (state == is_pressed(i, j))
-				continue;
-			changed = true;
-			set_state(i, j, state);
-			callback(matrix[i*ncols + j], state);
-		}
-		IO_config(rows[i], INPUT);
-	}
-	if (nrows == 0) {
-		for (uint8_t j = 0; j < ncols; ++j) {
-			bool state = !IO_get(cols[j]);
-			if (state == is_pressed(0, j))
-				continue;
-			changed = true;
-			set_state(0, j, state);
-			callback(matrix[j], state);
-		}
-	}
-	return changed;
+  return HAL_GPIO_WritePin(hid_pins[pin_num].port, hid_pins[pin_num].pin, pin_state);
 }
 
-void HID_set_scancode_state(uint8_t code, bool state)
+static bool IO_get(uint8_t pin_num)
+{
+  return (HAL_GPIO_ReadPin(hid_pins[pin_num].port, hid_pins[pin_num].pin) == GPIO_PIN_SET);
+}
+
+static void HID_set_scancode_state(uint8_t code, bool state)
 {
 	uint8_t byte_no = code / 8;
 	uint8_t bit_no = code & 0x07;
@@ -143,20 +123,68 @@ void HID_set_scancode_state(uint8_t code, bool state)
 	else
 		key_map[byte_no] |= _BV(bit_no);
 	/* The part below is not tested! */
-	if (keyboard_protocol == BOOT_PROTOCOL) {
-		if (state == true) {
-			uint8_t pos = 0;
-			for (; pos < 6 && six_keys[pos] != 0; ++pos)
-				;
-			if (pos < 6)
-				six_keys[pos] = code;
-		} else {
-			uint8_t pos = 0;
-			for (; pos < 6 && six_keys[pos] != code; ++pos)
-				;
-			if (pos < 6)
-				six_keys[pos] = 0;
-		}
+	if (state == true) {
+		uint8_t pos = 2;
+		for (; pos < 8 && six_keys[pos] != 0; ++pos)
+			;
+		if (pos < 8)
+			six_keys[pos] = code;
+	} else {
+		uint8_t pos = 2;
+		for (; pos < 8 && six_keys[pos] != code; ++pos)
+			;
+		if (pos < 8)
+			six_keys[pos] = 0;
 	}
+}
+
+static void LAYOUT_set_key_state(uint8_t key, bool event)
+{
+	if (event == DOWN) {
+		last_scancode[key] = scode[key];
+	}
+	HID_set_scancode_state(last_scancode[key], event);
+}
+
+void MATRIX_init()
+{
+	__HAL_RCC_GPIOA_CLK_ENABLE();
+	__HAL_RCC_GPIOB_CLK_ENABLE();
+	__HAL_RCC_GPIOC_CLK_ENABLE();
+	
+	for (uint8_t i = 0; i < nrows; ++i) {
+		IO_config(rows[i], OUTPUT);
+	}
+	for (uint8_t i = 0; i < ncols; ++i) {
+		IO_config(cols[i], INPUT);
+	}
+	
+	states = malloc(divceil(nrows*ncols, 8));
+	memset(states, 0, divceil(nrows*ncols, 8));
+	last_scancode = malloc(nrows*ncols);
+}
+
+bool MATRIX_scan()
+{
+	bool changed = false;
+	/* scan the matrix */
+	for (uint8_t i = 0; i < nrows; ++i) {
+		IO_set(rows[i], GPIO_PIN_SET);
+		for (uint8_t j = 0; j < ncols; ++j) {
+			bool state = IO_get(cols[j]);
+			if (state == is_pressed(i, j))
+				continue;
+			changed = true;
+			set_state(i, j, state);
+			LAYOUT_set_key_state(matrix[i][j], state);
+		}
+		IO_set(rows[i], GPIO_PIN_RESET);
+	}
+	return changed;
+}
+
+uint8_t* get_key_buff()
+{
+	return six_keys;
 }
 

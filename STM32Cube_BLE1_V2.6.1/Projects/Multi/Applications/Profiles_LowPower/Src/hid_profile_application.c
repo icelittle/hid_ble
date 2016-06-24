@@ -380,7 +380,7 @@ void Init_Profile(void)
   PRINTF ("Test Application: Initializing HID profile\n");
 
   /* Configure the User Button in EXTI Mode */
-  BSP_PB_Init(BUTTON_KEY, BUTTON_MODE_EXTI);
+//  BSP_PB_Init(BUTTON_KEY, BUTTON_MODE_EXTI);
 
   Osal_MemSet ( appHidServData, 0, (sizeof(tApplDataForHidServ)*HID_SERVICE_MAX) );
 
@@ -485,6 +485,7 @@ void Advertize(void)
  * @param  None
  * @retval int
  */
+extern uint8_t* get_key_buff(void);
 static int HID_Application_Process(void)
 {
   int ret_val = 1;
@@ -546,67 +547,70 @@ static int HID_Application_Process(void)
       BLE_Profile_Disconnect();
     }
 
-    if (send_measurement != 0)
-    {
-      __disable_irq(); /**< Disable all interrupts by setting PRIMASK bit on Cortex*/
-      send_measurement = 0;
-      __set_PRIMASK(uwPRIMASK_Bit);	/**< Restore PRIMASK bit*/
-      BLE_Profile_Write_DeviceState(APPL_WAIT);
+		if(MATRIX_scan()) {
+			HidDevice_Update_Input_Report(0, 0, 8, get_key_buff());
+		
+//    if (send_measurement != 0)
+//    {
+//      __disable_irq(); /**< Disable all interrupts by setting PRIMASK bit on Cortex*/
+//      send_measurement = 0;
+//      __set_PRIMASK(uwPRIMASK_Bit);	/**< Restore PRIMASK bit*/
+//      BLE_Profile_Write_DeviceState(APPL_WAIT);
 
-#if defined(APPL_UPDATE_INPUT_REPORT)
+//#if defined(APPL_UPDATE_INPUT_REPORT)
 
-#if defined(KEYBOARD_IP)
-      APPL_MESG_DBG(profiledbgfile,"Sending data...\n" );
-      uint8_t ipRepVal[REPORT_IP_LEN_0] = {2,0,0,0,0,0,0,0};
+//#if defined(KEYBOARD_IP)
+//      APPL_MESG_DBG(profiledbgfile,"Sending data...\n" );
+//      uint8_t ipRepVal[REPORT_IP_LEN_0] = {2,0,0,0,0,0,0,0};
 
-      /* Press AB followed by 0 */
-      ipRepVal[2] = KEY_A;
-      ipRepVal[3] = KEY_B;
-      HidDevice_Update_Input_Report(0,0,REPORT_IP_LEN_0,ipRepVal);
+//      /* Press AB followed by 0 */
+//      ipRepVal[2] = KEY_A;
+//      ipRepVal[3] = KEY_B;
+//      HidDevice_Update_Input_Report(0,0,REPORT_IP_LEN_0,ipRepVal);
 
-      ipRepVal[0] = KEY_NULL;
-      ipRepVal[2] = KEY_NULL;
-      ipRepVal[3] = KEY_NULL;
-      HidDevice_Update_Input_Report(0,0,REPORT_IP_LEN_0,ipRepVal);
+//      ipRepVal[0] = KEY_NULL;
+//      ipRepVal[2] = KEY_NULL;
+//      ipRepVal[3] = KEY_NULL;
+//      HidDevice_Update_Input_Report(0,0,REPORT_IP_LEN_0,ipRepVal);
 
-#elif defined(MOUSE_IP)
-      static int8_t ipRepVal[REPORT_IP_LEN_0] = {0,0,0,0};
-      static int8_t cnt = 0;
+//#elif defined(MOUSE_IP)
+//      static int8_t ipRepVal[REPORT_IP_LEN_0] = {0,0,0,0};
+//      static int8_t cnt = 0;
 
-      if(cnt == 0) {
-        ipRepVal[1] = MOUSE_OFFSET_X;
-        ipRepVal[2] = MOUSE_OFFSET_Y;
-        cnt++;
-      } else {
-        ipRepVal[1] = -MOUSE_OFFSET_X;
-        ipRepVal[2] = -MOUSE_OFFSET_Y;
-        cnt--;
-      }
+//      if(cnt == 0) {
+//        ipRepVal[1] = MOUSE_OFFSET_X;
+//        ipRepVal[2] = MOUSE_OFFSET_Y;
+//        cnt++;
+//      } else {
+//        ipRepVal[1] = -MOUSE_OFFSET_X;
+//        ipRepVal[2] = -MOUSE_OFFSET_Y;
+//        cnt--;
+//      }
 
-      HidDevice_Update_Input_Report(0,0,REPORT_IP_LEN_0,ipRepVal);
-#endif
+//      HidDevice_Update_Input_Report(0,0,REPORT_IP_LEN_0,ipRepVal);
+//#endif
 
-#elif defined(APPL_UPDATE_BOOT_KEYBOARD_IP_REPORT)
-      uint8_t ipRepVal[10] = {1,2,3,4,5,6,7,8,9,10};
-      //uint8_t ipRepVal1[10] = {1,2,3,4,5,6,7,8,9,11};
-      HidDevice_Update_Boot_Keyboard_Input_Report(0,10,ipRepVal);
+//#elif defined(APPL_UPDATE_BOOT_KEYBOARD_IP_REPORT)
+//      uint8_t ipRepVal[10] = {1,2,3,4,5,6,7,8,9,10};
+//      //uint8_t ipRepVal1[10] = {1,2,3,4,5,6,7,8,9,11};
+//      HidDevice_Update_Boot_Keyboard_Input_Report(0,10,ipRepVal);
 
-#elif defined(APPL_UPDATE_BOOT_MOUSE_IP_REPORT)
-      uint8_t mouseRepVal[10] = {1,2,3,4,5,6,7,8,0,0};
-      HidDevice_Update_Boot_Mouse_Input_Report(0,10,mouseRepVal);
+//#elif defined(APPL_UPDATE_BOOT_MOUSE_IP_REPORT)
+//      uint8_t mouseRepVal[10] = {1,2,3,4,5,6,7,8,0,0};
+//      HidDevice_Update_Boot_Mouse_Input_Report(0,10,mouseRepVal);
 
-#elif defined(APPL_UPDATE_BATTERY_LEVEL)
-      APPL_MESG_DBG(profiledbgfile,"HID_Device: APPL_UPDATE_BATTERY_LEVEL state (update battery level)\n");
-      HidDevice_Update_Battery_Level(battIdx,98);
+//#elif defined(APPL_UPDATE_BATTERY_LEVEL)
+//      APPL_MESG_DBG(profiledbgfile,"HID_Device: APPL_UPDATE_BATTERY_LEVEL state (update battery level)\n");
+//      HidDevice_Update_Battery_Level(battIdx,98);
 
-#elif defined(APPL_UPDATE_SCAN_REFRESH_CHARAC)
-      HidDevice_Update_Scan_Refresh_Char(0x01);
+//#elif defined(APPL_UPDATE_SCAN_REFRESH_CHARAC)
+//      HidDevice_Update_Scan_Refresh_Char(0x01);
 
-#elif defined(APPL_UPDATE_FEATURE_REPORT)
-      uint8_t featRepVal[8] = {8,7,6,5,4,3,2,1};
-      HidDevice_Update_Feature_Report(0,0,8,featRepVal);
+//#elif defined(APPL_UPDATE_FEATURE_REPORT)
+//      uint8_t featRepVal[8] = {8,7,6,5,4,3,2,1};
+//      HidDevice_Update_Feature_Report(0,0,8,featRepVal);
 
-#endif
+//#endif
 
     }else{
       ret_val = 0;

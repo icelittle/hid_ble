@@ -761,10 +761,10 @@ ARM Macro Assembler    Page 12
               00000000 
 Command Line: --debug --xref --diag_suppress=9931 --cpu=Cortex-M4.fp --apcs=int
 erwork --depend=stm32f401re_nucleo\startup_stm32f401xe.d -ostm32f401re_nucleo\s
-tartup_stm32f401xe.o -ID:\Work\cannon\BlueNRG-MS\STM32Cube_BLE1_V2.6.1\Projects
-\Multi\Applications\Profiles_LowPower\MDK-ARM\STM32F401RE-Nucleo\RTE -ID:\Keil_
+tartup_stm32f401xe.o -IZ:\code\cannon\BlueNRG-MS\STM32Cube_BLE1_V2.6.1\Projects
+\Multi\Applications\Profiles_LowPower\MDK-ARM\STM32F401RE-Nucleo\RTE -IC:\Keil_
 v5\ARM\PACK\Keil\STM32F4xx_DFP\2.8.0\Drivers\CMSIS\Device\ST\STM32F4xx\Include 
--ID:\Keil_v5\ARM\CMSIS\Include -ID:\Keil_v5\ARM\PACK\Keil\STM32F4xx_DFP\2.8.0\D
+-IC:\Keil_v5\ARM\CMSIS\Include -IC:\Keil_v5\ARM\PACK\Keil\STM32F4xx_DFP\2.8.0\D
 evice\Include --predefine="__MICROLIB SETA 1" --predefine="__UVISION_VERSION SE
 TA 518" --predefine="STM32F401xE SETA 1" --list=startup_stm32f401xe.lst startup
 _stm32f401xe.s

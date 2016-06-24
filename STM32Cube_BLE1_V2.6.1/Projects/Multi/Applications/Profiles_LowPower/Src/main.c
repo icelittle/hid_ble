@@ -178,7 +178,9 @@ int main(void)
   Init_RTC();  
   TIMER_Init(&hrtc);
   TIMER_Create(eTimerModuleID_BlueNRG_Profile_App, &(profileApplContext.profileTimer_Id), eTimerMode_Repeated, 0);
-    
+  
+	MATRIX_init();
+	
   /* Initialize the BlueNRG SPI driver */
   BNRG_SPI_Init();
   
